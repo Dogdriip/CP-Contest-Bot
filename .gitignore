@@ -22,6 +22,7 @@ var/
 # custom
 webhook_info.json
 .env
+node_modules/
 
 
 
