@@ -105,9 +105,11 @@ def lambda_func(event, context):
             name = x["name"]
             # Contest starts.
             starts = datetime.fromtimestamp(x["starts"], KST)
+            starts -= timedelta(hours=9)  # 이건 좀 아니지
             starts_s = starts.strftime("%Y-%m-%d %H:%M")
             # Contest ends.
             ends = datetime.fromtimestamp(x["ends"], KST)
+            ends -= timedelta(hours=9)  # ㅁㄴㅇㄹ
             ends_s = ends.strftime("%Y-%m-%d %H:%M")
             # Contest URL.
             url = x["url"]

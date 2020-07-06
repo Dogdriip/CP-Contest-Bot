@@ -11,6 +11,7 @@ def get_contests():
     req = requests.get(ATCODER_URL + '/contests')
     if req.status_code != 200:
         ret['fetch'] = False
+        return ret
     else:
         ret['fetch'] = True
 
@@ -31,8 +32,7 @@ def get_contests():
         h, m = map(int, duration_str.split(':'))
         duration = h * 60 * 60 + m * 60
         ends = starts + duration
-
-        # print(starts, ends, duration)
+        
         ret['contests'].append({
             'name': name,
             'starts': starts,
