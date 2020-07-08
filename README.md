@@ -15,13 +15,7 @@
 - Lambda에서 POST request를 Incoming에다가 보내주면 된다  
 
 ### 기타
-- 여러 대회 일정 모아서 API로 제공하는 사설 사이트도 있더라. 따로 크롤링 안 하고 이걸 썼으면 더 편했을 테지만, 어차피 안 찾아봤을 듯. 그냥 내가 만들어보는 것에 의의가 있으니 뭐...
-
-## TODO
-- [x] Atcoder support
-- [x] ~~당일 시작하는 콘테스트가 있을 경우 따로 알림~~ 대회 얼마나 남았는지를 따로 출력
-- [x] Use serverless
-- [ ] Slack에서 attachment 대신에 blocks 사용하기 
+- 여러 대회 일정 모아서 API로 제공하는 사설 사이트도 있더라. (https://clist.by/ ) 따로 크롤링 안 하고 이걸 썼으면 더 편했을 테지만, 어차피 안 찾아봤을 듯. 그냥 내가 만들어보는 것에 의의가 있으니 뭐...
 
 ## 참고한 URL
 - https://codeforces.com/apiHelp/objects#Contest
