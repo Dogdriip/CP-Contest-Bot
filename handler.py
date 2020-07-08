@@ -7,6 +7,10 @@ import codeforces, atcoder
 
 KST = timezone(timedelta(hours=9))
 WEBHOOK_INFO_FILE = "webhook_info.json"
+COLOR = {
+    "codeforces": "#FFBE5C",
+    "atcoder": "#9D3757"
+}
 
 def lambda_func(event, context):
     """
@@ -17,8 +21,8 @@ def lambda_func(event, context):
     # Webhook info.
     webhook_info = json.load(open(WEBHOOK_INFO_FILE, "r"))
     webhook_url = webhook_info["INCOMING_WEBHOOK_URL"]
-    # For slack payloads. final result (contest lists) goes here.
-    attachments = []
+    # 
+    contests = []
     # Now datetime.
     now = datetime.now(KST)
     now_s = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -58,6 +62,7 @@ def lambda_func(event, context):
                 attach_text += f"{starts_delta.days}일 "
             attach_text += f"{starts_delta.seconds // 3600}시간 후에 시작해요!"
 
+            """
             attachments.append({
                 "mrkdwn_in": ["text"],
                 "color": "#FFBE5C",
@@ -80,6 +85,17 @@ def lambda_func(event, context):
                         "short": True
                     }
                 ]
+            })
+            """
+            contests.append({
+                "platform": "codeforces",
+                "name": name,
+                "starts": starts,
+                "starts_str": starts_s,
+                "ends": ends,
+                "ends_str": ends_s,
+                "url": url,
+                "remaining_time": starts_delta
             })
         response_detail["codeforces_result"] = "succeed"
         response_detail["codeforces_body"] = cf_list
@@ -121,6 +137,7 @@ def lambda_func(event, context):
                 attach_text += f"{starts_delta.days}일 "
             attach_text += f"{starts_delta.seconds // 3600}시간 후에 시작해요!"
 
+            """
             attachments.append({
                 "mrkdwn_in": ["text"],
                 "color": "#9D3757",
@@ -144,8 +161,52 @@ def lambda_func(event, context):
                     }
                 ]
             })
+            """
+            contests.append({
+                "platform": "atcoder",
+                "name": name,
+                "starts": starts,
+                "starts_str": starts_s,
+                "ends": ends,
+                "ends_str": ends_s,
+                "url": url,
+                "remaining_time": starts_delta
+            })
         response_detail["atcoder_result"] = "succeed"
         response_detail["atcoder_body"] = at_list
+
+    """
+    Build `attachments` list from `contests` list.
+    This'll be used in slack payloads.
+    """
+    # TODO: Sort contests by remaining time.
+
+    # For slack payloads. final result (contest lists) goes here.
+    attachments = []
+    for contest in contests:
+        attachments.append({
+            "mrkdwn_in": ["text"],
+            "color": COLOR[contest["platform"]],
+            "title": contest["name"],
+            "text": "asdfasdf",
+            "fields": [
+                {
+                    "title": "시작 일시",
+                    "value": contest["starts_str"],
+                    "short": True
+                },
+                {
+                    "title": "종료 일시",
+                    "value": contest["ends_str"],
+                    "short": True
+                },
+                {
+                    "title": "대회 URL",
+                    "value": contest["url"],
+                    "short": True
+                }
+            ]
+        })
 
     """
     Send post to slack webhook, return response from lambda.
