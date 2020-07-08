@@ -9,7 +9,8 @@ KST = timezone(timedelta(hours=9))
 WEBHOOK_INFO_FILE = "webhook_info.json"
 COLOR = {
     "codeforces": "#FFBE5C",
-    "atcoder": "#9D3757"
+    "atcoder": "#9D3757",
+    "error": "#FF0000"
 }
 
 def lambda_func(event, context):
@@ -21,7 +22,7 @@ def lambda_func(event, context):
     # Webhook info.
     webhook_info = json.load(open(WEBHOOK_INFO_FILE, "r"))
     webhook_url = webhook_info["INCOMING_WEBHOOK_URL"]
-    # 
+    # Contests list. It'll be sorted and converted into attachments list.
     contests = []
     # Now datetime.
     now = datetime.now(KST)
@@ -33,12 +34,11 @@ def lambda_func(event, context):
     cf_list = codeforces.get_contests()
     if not cf_list["fetch"]:
         # if Codeforces fetch fails
-        attachments.append({
-            "color": "#FF0000",
-            "fields": [{
-                "value": "Error fetching Codeforces!"
-            }]
+        contests.append({
+            "type": "error",
+            "detail": "Error fetching Codeforces!"
         })
+
         response_detail["codeforces_result"] = "failed"
         response_detail["codeforces_body"] = ""
     else:
@@ -48,55 +48,22 @@ def lambda_func(event, context):
             name = x["name"]
             # Contest starts.
             starts = datetime.fromtimestamp(x["startTimeSeconds"], KST)
-            starts_s = starts.strftime("%Y-%m-%d %H:%M")
             # Contest ends.
             ends = datetime.fromtimestamp(x["startTimeSeconds"] + x["durationSeconds"], KST)
-            ends_s = ends.strftime("%Y-%m-%d %H:%M")
             # Contest URL.
             url = f'https://codeforces.com/contests/{x["id"]}'
+            # Remaining time until contest starts.
+            remaining_time = starts - now
 
-            # For attach text (Remaining time)
-            starts_delta = starts - now
-            attach_text = ""
-            if starts_delta.days != 0:
-                attach_text += f"{starts_delta.days}일 "
-            attach_text += f"{starts_delta.seconds // 3600}시간 후에 시작해요!"
-
-            """
-            attachments.append({
-                "mrkdwn_in": ["text"],
-                "color": "#FFBE5C",
-                "title": name,
-                "text": attach_text,
-                "fields": [
-                    {
-                        "title": "시작 일시",
-                        "value": starts_s,
-                        "short": True
-                    },
-                    {
-                        "title": "종료 일시",
-                        "value": ends_s,
-                        "short": True
-                    },
-                    {
-                        "title": "대회 URL",
-                        "value": url,
-                        "short": True
-                    }
-                ]
-            })
-            """
             contests.append({
-                "platform": "codeforces",
+                "type": "codeforces",
                 "name": name,
                 "starts": starts,
-                "starts_str": starts_s,
                 "ends": ends,
-                "ends_str": ends_s,
                 "url": url,
-                "remaining_time": starts_delta
+                "remaining_time": remaining_time
             })
+        
         response_detail["codeforces_result"] = "succeed"
         response_detail["codeforces_body"] = cf_list
     
@@ -106,12 +73,11 @@ def lambda_func(event, context):
     at_list = atcoder.get_contests()
     if not at_list['fetch']:
         # if Atcoder fetch fails
-        attachments.append({
-            "color": "#FF0000",
-            "fields": [{
-                "value": "Error fetching Atcoder!"
-            }]
+        contests.append({
+            "type": "error",
+            "detail": "Error fetching Atcoder!"
         })
+
         response_detail["atcoder_result"] = "failed"
         response_detail["atcoder_body"] = ""
     else:
@@ -122,56 +88,23 @@ def lambda_func(event, context):
             # Contest starts.
             starts = datetime.fromtimestamp(x["starts"], KST)
             starts -= timedelta(hours=9)  # 이건 좀 아니지
-            starts_s = starts.strftime("%Y-%m-%d %H:%M")
             # Contest ends.
             ends = datetime.fromtimestamp(x["ends"], KST)
             ends -= timedelta(hours=9)  # ㅁㄴㅇㄹ
-            ends_s = ends.strftime("%Y-%m-%d %H:%M")
             # Contest URL.
             url = x["url"]
+            # Remaining time until contest starts.
+            remaining_time = starts - now
 
-            # For attach text (Remaining time)
-            starts_delta = starts - now
-            attach_text = ""
-            if starts_delta.days != 0:
-                attach_text += f"{starts_delta.days}일 "
-            attach_text += f"{starts_delta.seconds // 3600}시간 후에 시작해요!"
-
-            """
-            attachments.append({
-                "mrkdwn_in": ["text"],
-                "color": "#9D3757",
-                "title": name,
-                "text": attach_text,
-                "fields": [
-                    {
-                        "title": "시작 일시",
-                        "value": starts_s,
-                        "short": True
-                    },
-                    {
-                        "title": "종료 일시",
-                        "value": ends_s,
-                        "short": True
-                    },
-                    {
-                        "title": "대회 URL",
-                        "value": url,
-                        "short": True
-                    }
-                ]
-            })
-            """
             contests.append({
-                "platform": "atcoder",
+                "type": "atcoder",
                 "name": name,
                 "starts": starts,
-                "starts_str": starts_s,
                 "ends": ends,
-                "ends_str": ends_s,
                 "url": url,
-                "remaining_time": starts_delta
+                "remaining_time": remaining_time
             })
+        
         response_detail["atcoder_result"] = "succeed"
         response_detail["atcoder_body"] = at_list
 
@@ -179,27 +112,39 @@ def lambda_func(event, context):
     Build `attachments` list from `contests` list.
     This'll be used in slack payloads.
     """
-    # TODO: Sort contests by remaining time.
+    # Sort contests by remaining time.
+    contests.sort(key=lambda contest: contest["remaining_time"])
 
     # For slack payloads. final result (contest lists) goes here.
     attachments = []
     for contest in contests:
+        # Format starts, ends time to string.
+        starts_str = contest["starts"].strftime("%Y-%m-%d %H:%M")
+        ends_str = contest["ends"].strftime("%Y-%m-%d %H:%M")
+        # Remaining time to body text.
+        remaining_time = contest["remaining_time"]
+        body_text = ""
+        if remaining_time.days != 0:
+            body_text += f"{remaining_time.days}일 "
+        body_text += f"{remaining_time.seconds // 3600}시간 후에 시작해요!"
+        
+        # Configure attachments ('ll be used in slack payloads.)
         attachments.append({
             "mrkdwn_in": ["text"],
-            "color": COLOR[contest["platform"]],
+            "color": COLOR[contest["type"]],
             "title": contest["name"],
-            "text": "asdfasdf",
+            "text": body_text,
             "fields": [
                 {
                     "title": "시작 일시",
-                    "value": contest["starts_str"],
+                    "value": starts_str,
                     "short": True
                 },
-                {
-                    "title": "종료 일시",
-                    "value": contest["ends_str"],
-                    "short": True
-                },
+                # {
+                #     "title": "종료 일시",
+                #     "value": ends_str,
+                #     "short": True
+                # },
                 {
                     "title": "대회 URL",
                     "value": contest["url"],
@@ -212,7 +157,7 @@ def lambda_func(event, context):
     Send post to slack webhook, return response from lambda.
     """
     payloads = {
-        "text": f"{now_s} 기준 콘테스트 목록",
+        "text": f"{now_s} 기준 콘테스트 목록입니다.",
         "attachments": attachments
     }
 
