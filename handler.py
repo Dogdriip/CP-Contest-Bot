@@ -12,6 +12,7 @@ COLOR = {
     "atcoder": "#9D3757",
     "error": "#FF0000"
 }
+LIMIT = 5
 
 def lambda_func(event, context):
     """
@@ -114,6 +115,8 @@ def lambda_func(event, context):
     """
     # Sort contests by remaining time.
     contests.sort(key=lambda contest: contest["remaining_time"])
+    # Limit # of contests. 
+    contests = contests[:LIMIT]
 
     # For slack payloads. final result (contest lists) goes here.
     attachments = []
@@ -157,7 +160,7 @@ def lambda_func(event, context):
     Send post to slack webhook, return response from lambda.
     """
     payloads = {
-        "text": f"{now_s} 기준 콘테스트 목록입니다.",
+        "text": f"{now_s} 기준 콘테스트 목록입니다. (최대 {LIMIT}개까지만 표시)",
         "attachments": attachments
     }
 
