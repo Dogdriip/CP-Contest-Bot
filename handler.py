@@ -6,23 +6,22 @@ import os
 import codeforces, atcoder
 
 KST = timezone(timedelta(hours=9))
-WEBHOOK_INFO_FILE = "webhook_info.json"
+CONFIG_FILE = "config.json"
+CONFIG = {}
 COLOR = {
     "codeforces": "#FFBE5C",
     "atcoder": "#9D3757",
     "error": "#FF0000"
 }
-LIMIT = 5
 
 def lambda_func(event, context):
     """
     Configure variables.
     """
+    # Load configure from CONFIG_FILE.
+    CONFIG = json.load(open(CONFIG_FILE, "r"))
     # Final response detail from this function.
     response_detail = {}
-    # Webhook info.
-    webhook_info = json.load(open(WEBHOOK_INFO_FILE, "r"))
-    webhook_url = webhook_info["INCOMING_WEBHOOK_URL"]
     # Contests list. It'll be sorted and converted into attachments list.
     contests = []
     # Now datetime.
@@ -115,8 +114,9 @@ def lambda_func(event, context):
     """
     # Sort contests by remaining time.
     contests.sort(key=lambda contest: contest["remaining_time"])
-    # Limit # of contests. 
-    contests = contests[:LIMIT]
+    # Limit # of contests.
+    contests_limit = CONFIG["LIMIT"] 
+    contests = contests[:contests_limit]
 
     # For slack payloads. final result (contest lists) goes here.
     attachments = []
@@ -160,12 +160,12 @@ def lambda_func(event, context):
     Send post to slack webhook, return response from lambda.
     """
     payloads = {
-        "text": f"{now_s} 기준 콘테스트 목록입니다. (최대 {LIMIT}개까지만 표시)",
+        "text": f"{now_s} 기준 콘테스트 목록입니다. (최대 {contests_limit}개까지만 표시)",
         "attachments": attachments
     }
 
     req = requests.post(
-        webhook_url,
+        CONFIG["INCOMING_WEBHOOK_URL"],
         data=json.dumps(payloads),
         headers={"Content-Type": "application/json"}
     )
